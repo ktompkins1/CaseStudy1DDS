@@ -1,0 +1,274 @@
+---
+title: "DDSAnalytics_FritoLay"
+author: "Katrina Tompkins"
+date: "2024-07-01"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+
+# Load necessary libraries
+library(tidyverse)
+library(caret)
+library(e1071)
+library(class)
+library(ggplot2)
+library(tidyverse)
+
+#Introduction: DDSAnalytics is an analytics company that specializes in talent management solutions for Fortune 100 companies. Talent management is defined as the iterative process of developing and retaining employees. It may include workforce planning, employee training programs, identifying high-potential employees and reducing/preventing voluntary employee turnover (attrition). To gain a competitive edge over its competition, DDSAnalytics is planning to leverage data science for talent management. The executive leadership has identified predicting employee turnover as its first application of data science for talent management. Before the business green lights the project, they have tasked your data science team to conduct an analysis of existing employee data. 
+
+#You have been given a dataset (CaseStudy1-data.csv) to do a data analysis to identify factors that lead to attrition. 
+## Load the dataset
+FLdata = read.csv(file.choose(), header = TRUE, stringsAsFactors = TRUE)
+
+# Display the structure and summary of the dataset
+str(FLdata)
+summary(FLdata)
+
+# Check for missing values
+colSums(is.na(FLdata))
+
+# Convert categorical variables to factors
+FLdata$JobRole <- as.factor(FLdata$JobRole)
+FLdata$JobRole
+
+FLdata$Attrition <- as.factor(FLdata$Attrition)
+FLdata$Attrition
+
+# Visualize the distribution of attrition
+ggplot(FLdata, aes(x = Attrition)) + 
+  geom_bar() +
+  ggtitle("Attrition Distribution of Frito Lay Employee Data")
+
+# Convert Attrition to a binary factor. Yes = 1
+FLdata$Attrition <- as.factor(ifelse(FLdata$Attrition == "Yes", 1, 0))
+FLdata$Attrition
+
+# Identify columns with only one unique value
+single_level_cols <- sapply(FLdata, function(col) length(unique(col)) <= 1)
+single_level_cols
+
+# Remove these columns from the dataset
+FLdata <- FLdata[, !single_level_cols]
+
+# Ensure all factor columns have at least two levels
+factor_cols <- sapply(FLdata, is.factor)
+if (any(!level_check)) {
+  stop("Some factors still have less than 2 levels.")
+}
+
+# Identify top factors contributing to attrition using logistic regression
+logistic_model <- glm(Attrition ~ ., data = FLdata, family = binomial)
+summary(logistic_model)
+
+# Extract top 3 significant factors (based on p-values and coefficients)
+top_factors <- summary(logistic_model)$coefficients
+top_factors <- top_factors[order(abs(top_factors[, "Estimate"]), decreasing = TRUE), ]
+top_factors
+top_3_factors <- rownames(top_factors)[2:4] # Exclude the intercept
+top_3_factors
+
+# Plot Top 3 Factors attributing to attrition/turnovers
+ggplot(FLdata, aes(x = Department)) + 
+  geom_bar() + 
+  ggtitle("Count of of Frito Lay Employee Departments Data")
+
+#Convert categorical variables to factors
+FLdata$JobSatisfaction <- as.factor(FLdata$JobSatisfaction)
+FLdata$JobSatisfaction
+
+#Plot Department vs Job Satisfaction
+ggplot(FLdata, aes(x = Department, fill = JobSatisfaction)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Department vs Job Satisfaction", x = "Department", y = "Count") +
+  theme_minimal()
+
+# Plot Job Satisfaction vs. Attrition
+ggplot(FLdata, aes(x = JobSatisfaction, fill = Attrition)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Job Satisfaction vs Attrition", x = "Job Satisfaction", y = "Count") +
+  theme_minimal()
+
+# Plot Performance Rating vs. Attrition
+ggplot(FLdata, aes(x = PerformanceRating, fill = Attrition)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Performance Rating vs Attrition", x = "Performance Rating", y = "Count") +
+  theme_minimal()
+
+# Plot Environment Satisfaction vs. Attrition
+ggplot(FLdata, aes(x = EnvironmentSatisfaction, fill = Attrition)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Environment Satisfaction vs Attrition", x = "EnvironmentSatisfaction", y = "Count") +
+  theme_minimal
+
+
+#Plot Department vs Attrition
+ggplot(FLdata, aes(x= Attrition, fill = Department))+
+  geom_bar(position = "dodge") +
+  labs(title = "Department vs Attrition", x = "Attrition", y = "Count") +
+  theme_minimal()
+
+# Plot OverTime vs. Attrition
+ggplot(FLdata, aes(x = OverTime, fill = Attrition)) +
+  geom_bar(position = "dodge") +
+  labs(title = "OverTime vs Attrition", x = "OverTime", y = "Count") +
+  theme_minimal()
+
+# Plot Monthly Income vs. Attrition
+ggplot(FLdata, aes(x = Attrition, y = MonthlyIncome, fill = Attrition)) +
+  geom_boxplot() +
+  labs(title = "Monthly Income vs Attrition", x = "Attrition", y = "Monthly Income") +
+  theme_minimal()
+
+# Analyze job role specific trends
+job_role_trends <- FLdata %>%
+  group_by(JobRole) %>%
+  summarize(AttritionRate = mean(as.numeric(Attrition) - 1),
+            JobSatisfaction = mean(as.numeric(JobSatisfaction)))
+
+# Visualize job role trends
+ggplot(job_role_trends, aes(x = reorder(JobRole, -AttritionRate), y = AttritionRate)) +
+  geom_bar(stat = 'identity') + 
+  coord_flip() + 
+  ggtitle("Attrition Rate by Job Role")
+
+ggplot(job_role_trends, aes(x = reorder(JobRole, -AttritionRate), y = AttritionRate)) +
+  geom_bar(stat = 'identity') + 
+  geom_text(aes(label = round(AttritionRate, 2)), 
+            position = position_stack(vjust = 0.5), 
+            color = "white") + 
+  coord_flip() + 
+  ggtitle("Attrition Rate by Job Role")
+
+
+ggplot(job_role_trends, aes(x = reorder(JobRole, -JobSatisfaction), y = JobSatisfaction)) +
+  geom_bar(stat = 'identity') +
+  geom_text(aes(label = round(JobSatisfaction, 2)), 
+            position = position_stack(vjust = 0.5), 
+            color = "white") +
+  coord_flip() + ggtitle("Job Satisfaction by Job Role")
+
+# Split the data into training and validation sets
+set.seed(123)
+trainIndex <- createDataPartition(FLdata$Attrition, p = .8, list = FALSE)
+train_data <- FLdata[trainIndex, ]
+val_data <- FLdata[-trainIndex, ]
+
+# k-Nearest Neighbors Model
+knn_model <- train(Attrition ~ ., data = train_data, method = 'knn', tuneGrid = data.frame(k = c(5, 7)))
+knn_pred <- predict(knn_model, val_data)
+knn_conf_matrix <- confusionMatrix(knn_pred, val_data$Attrition)
+knn_conf_matrix
+
+plot(knn_model)
+
+# Convert knn confusion matrix to data frame
+knnconf_matrix_df <- as.data.frame(as.table(knn_conf_matrix))
+knnconf_matrix_df
+
+# Plot using ggplot2
+ggplot(data = knnconf_matrix_df, aes(x = Prediction, y = Reference, fill = Freq)) +
+  geom_tile() +
+  geom_text(aes(label = Freq), color = "white") +
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(x = "Predicted", y = "Actual", title = "knn Confusion Matrix") +
+  theme_minimal()
+
+# Identify columns with zero variance
+zero_var_cols <- nearZeroVar(FLdata, saveMetrics = TRUE)
+zero_var_cols
+
+# Remove columns with zero variance
+FLdata <- FLdata[, !zero_var_cols$zeroVar]
+
+# Check for NA values
+na_counts <- colSums(is.na(FLdata))
+na_counts
+
+# Handle NA values (e.g., removing rows with NA values)
+FLdata <- na.omit(FLdata)
+
+# Check factor levels
+sapply(FLdata[factor_cols], levels)
+
+# Ensure consistency in data partitioning
+trainIndex <- createDataPartition(FLdata$Attrition, p = .8, list = FALSE)
+trainIndex
+
+train_nbdata <- FLdata[trainIndex, ]
+train_nbdata
+
+val_nbdata <- FLdata[-trainIndex, ]
+val_nbdata
+
+# Ensure the levels in the validation set match the training set
+for (col in factor_cols) {
+  if (col %in% names(val_nbdata)) {
+    val_nbdata[[col]] <- factor(val_nbdata[[col]], levels = levels(train_nbdata[[col]]))
+  }
+}
+
+
+# Train the Naive Bayes model
+nb_model <- naiveBayes(Attrition ~ ., data = train_nbdata)
+
+# Naive Bayes Model
+nb_pred <- predict(nb_model, val_data)
+nb_conf_matrix <- confusionMatrix(nb_pred, val_data$Attrition)
+nb_conf_matrix
+
+# Convert confusion matrix to data frame
+conf_matrix_df <- as.data.frame(as.table(nb_conf_matrix))
+conf_matrix_df
+
+# Plot using ggplot2
+ggplot(data = conf_matrix_df, aes(x = Prediction, y = Reference, fill = Freq)) +
+  geom_tile() +
+  geom_text(aes(label = Freq), color = "white") +
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(x = "Predicted", y = "Actual", title = "NB Confusion Matrix") +
+  theme_minimal()
+
+# Predict using the best model (assuming kNN is better based on performance metrics)
+best_model <- ifelse(knn_sensitivity + knn_specificity >= nb_sensitivity + nb_specificity, knn_model, nb_model)
+best_model
+
+# I provided an additional data set of 300 observations that do not have the labels (attrition or not attrition).  #We will refer to this data set as the “Competition Set” and is in the file “CaseStudy1CompSet No Attrition.csv”.  I ##have the real labels and will thus assess the accuracy rate of your best classification model. 10% of your grade #will depend on the sensitivity and specificity rate of your “best” classification model for identifying attrition. # You must provide a model that will attain at least 60% sensitivity and specificity (60 each = 120 total) for the #training and the validation set.  Therefore, you must provide the labels (ordered by ID) in a csv file.  Please #include this in your GitHub repository and call the file “Case1PredictionsXXXX Attrition.csv”.  XXXX is your last #name.  (Example: Case1PredictionsSadler Attrition.csv” would be mine.)  
+
+# Step 1: Load and preprocess the training data
+train_data2 = read.csv(file.choose(), header = TRUE, stringsAsFactors = TRUE)
+str(train_data2)
+
+train_labels <- train_data2$Attrition
+train_data2$Attrition <- NULL
+
+# Step 2: Fit a k-NN model and evaluate it
+train_control <- trainControl(method = "cv", number = 7, classProbs = TRUE, summaryFunction = twoClassSummary)
+train_control
+
+set.seed(123)
+knn_model <- train(train_data2$ID, train_labels, method = "knn", trControl = train_control, metric = "ROC")
+
+knn_pred <- predict(knn_model, train_data2)
+cm <- confusionMatrix(knn_pred, train_labels, positive = "Yes")
+
+sensitivity <- cm$byClass["Sensitivity"]
+specificity <- cm$byClass["Specificity"]
+
+if (sensitivity >= 0.60 & specificity >= 0.60) {
+  print("The k-NN model meets the sensitivity and specificity criteria.")
+} else {
+  print("The k-NN model does not meet the criteria. Try tuning the model or using a different k value.")
+}
+
+# Step 4: Make predictions on the competition set
+comp_set <- read.csv("CaseStudy1CompSet No Attrition.csv")
+comp_pred <- predict(knn_model, comp_set)
+comp_set$Attrition <- comp_pred
+
+# Step 5: Output the predictions to a CSV file
+output <- comp_set[, c("ID", "Attrition")]
+write.csv(output, "CaseStudy1CompSet_Predictions.csv", row.names = FALSE)
